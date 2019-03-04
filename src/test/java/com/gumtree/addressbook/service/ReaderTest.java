@@ -6,12 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.MALE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -80,6 +82,26 @@ class ReaderTest {
     }
 
     @Test
+    void readThrowsDateTimeParseExceptionWhenLineIsInvalid() throws IOException {
+        Path path = Files.createTempFile(tempDir, "", "");
+        Files.write(path, "Bill McKnight, Male, 16/13/77".getBytes());
+
+        assertThrows(DateTimeParseException.class, () -> new Reader().read(path));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Bill McKnight, , 16/03/77",
+            ", Male, 16/03/77",
+            "Bill McKnight, UNKNOWN, 16/03/77"})
+    void readThrowsIllegalArgumentExceptionWhenLineIsInvalid(final String line) throws IOException {
+        Path path = Files.createTempFile(tempDir, "", "");
+        Files.write(path, line.getBytes());
+
+        assertThrows(IllegalArgumentException.class, () -> new Reader().read(path));
+    }
+
+    @Test
     void readReturnsAddressBookWhenLineHasLeadingAndTrailingSpaces() throws IOException {
         Path path = Files.createTempFile(tempDir, "", "");
         Files.write(path, "   \t   Bill McKnight,Male,16/03/77\t   \n".getBytes());
@@ -90,7 +112,6 @@ class ReaderTest {
                 .extracting("name", "gender", "dateOfBirth")
                 .containsOnly(tuple("Bill McKnight", MALE, LocalDate.of(1977, 3, 16)));
     }
-
 
     @Test
     void readReturnsAddressBookWhenLineElementsHaveWhitespaces() throws IOException {
