@@ -2,6 +2,7 @@ package com.gumtree.addressbook.service;
 
 import com.gumtree.addressbook.domain.AddressBook;
 import com.gumtree.addressbook.domain.AddressBookEntry.Gender;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -17,8 +18,7 @@ import java.time.format.DateTimeParseException;
 
 import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.FEMALE;
 import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.MALE;
-import static java.nio.file.Files.createTempFile;
-import static java.nio.file.Files.write;
+import static java.lang.String.format;
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,9 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ReaderTest {
 
-
     @TempDir
     static Path tempDir;
+    private Path path;
+
+    @BeforeEach
+    void setup() throws IOException {
+        path = Files.createTempFile(tempDir, "", "");
+    }
 
     @Test
     void readThrowsExceptionWhenFileDoesNotExist() {
@@ -38,8 +43,15 @@ class ReaderTest {
 
 
     @Test
-    void readReturnsEmptyAddressBookWhenFileIsEmpty() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
+    void readReturnsEmptyAddressBookWhenFileIsEmpty() {
+        AddressBook actual = new Reader().read(path);
+
+        assertThat(actual.getEntries()).isEmpty();
+    }
+
+    @Test
+    void readReturnsEmptyAddressBookWhenFileHasOnlyNewLine() {
+        writeLine(path, "");
 
         AddressBook actual = new Reader().read(path);
 
@@ -47,9 +59,8 @@ class ReaderTest {
     }
 
     @Test
-    void readReturnsEmptyAddressBookWhenFileHasOnlyNewLine() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "\n".getBytes());
+    void readReturnsEmptyAddressBookWhenFileHasBlankLine() {
+        writeLine(path, "  \t");
 
         AddressBook actual = new Reader().read(path);
 
@@ -57,9 +68,8 @@ class ReaderTest {
     }
 
     @Test
-    void readReturnsEmptyAddressBookWhenFileHasBlankLine() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "  \t\n".getBytes());
+    void readReturnsEmptyAddressBookWhenLineHas2Elements() {
+        writeLine(path, "Bill McKnight, Male");
 
         AddressBook actual = new Reader().read(path);
 
@@ -67,9 +77,8 @@ class ReaderTest {
     }
 
     @Test
-    void readReturnsEmptyAddressBookWhenLineHas2Elements() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "Bill McKnight, Male\n".getBytes());
+    void readReturnsEmptyAddressBookWhenLineHas4Elements() {
+        writeLine(path, "Bill McKnight, Male, 16/03/77, address");
 
         AddressBook actual = new Reader().read(path);
 
@@ -77,19 +86,8 @@ class ReaderTest {
     }
 
     @Test
-    void readReturnsEmptyAddressBookWhenLineHas4Elements() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "Bill McKnight, Male, 16/03/77, address\n".getBytes());
-
-        AddressBook actual = new Reader().read(path);
-
-        assertThat(actual.getEntries()).isEmpty();
-    }
-
-    @Test
-    void readThrowsDateTimeParseExceptionWhenLineIsInvalid() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "Bill McKnight, Male, 16/13/77".getBytes());
+    void readThrowsDateTimeParseExceptionWhenLineIsInvalid() {
+        writeLine(path, "Bill McKnight, Male, 16/13/77");
 
         assertThrows(DateTimeParseException.class, () -> new Reader().read(path));
     }
@@ -99,17 +97,15 @@ class ReaderTest {
             "Bill McKnight, , 16/03/77",
             ", Male, 16/03/77",
             "Bill McKnight, UNKNOWN, 16/03/77"})
-    void readThrowsIllegalArgumentExceptionWhenLineIsInvalid(final String line) throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, line.getBytes());
+    void readThrowsIllegalArgumentExceptionWhenLineIsInvalid(final String line) {
+        writeLine(path, line);
 
         assertThrows(IllegalArgumentException.class, () -> new Reader().read(path));
     }
 
     @Test
-    void readReturnsAddressBookWhenLineHasLeadingAndTrailingSpaces() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "   \t   Bill McKnight,Male,16/03/77\t   \n".getBytes());
+    void readReturnsAddressBookWhenLineHasLeadingAndTrailingSpaces() {
+        writeLine(path, "   \t   Bill McKnight,Male,16/03/77\t   ");
 
         AddressBook actual = new Reader().read(path);
 
@@ -119,9 +115,8 @@ class ReaderTest {
     }
 
     @Test
-    void readReturnsAddressBookWhenLineElementsHaveWhitespaces() throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, "Bill McKnight    , Male  \t ,  \t16/03/77\n".getBytes());
+    void readReturnsAddressBookWhenLineElementsHaveWhitespaces() {
+        writeLine(path, "Bill McKnight    , Male  \t ,  \t16/03/77");
 
         AddressBook actual = new Reader().read(path);
 
@@ -136,25 +131,23 @@ class ReaderTest {
             "MALE, MALE",
             "Female, FEMALE",
             "female, FEMALE"})
-    void readReturnsAddressBookWhenFileHasEntry(final String fileGender, final String addressBookEntryGender) throws IOException {
-        Path path = Files.createTempFile(tempDir, "", "");
-        Files.write(path, String.format("Bill McKnight, %s, 16/03/77\n", fileGender).getBytes());
+    void readReturnsAddressBookWhenFileHasEntry(final String fileGender, final Gender addressBookEntryGender) {
+        writeLine(path, format("Bill McKnight, %s, 16/03/77", fileGender));
 
         AddressBook actual = new Reader().read(path);
 
         assertThat(actual.getEntries())
                 .extracting("name", "gender", "dateOfBirth")
-                .containsOnly(tuple("Bill McKnight", Gender.valueOf(addressBookEntryGender), LocalDate.of(1977, MARCH, 16)));
+                .containsOnly(tuple("Bill McKnight", addressBookEntryGender, LocalDate.of(1977, MARCH, 16)));
     }
 
     @Test
-    void readReturnsAddressBookWhenFileEntryHasSpace() throws IOException {
-        Path path = createTempFile(tempDir, "", "");
-        write(path, "Bill McKnight, Male , 16/03/12\n".getBytes());
-        write(path, "Paul Robinson, Male, 15/01/85\n".getBytes(), APPEND);
-        write(path, "Gemma Lane, Female, 20/11/91\n".getBytes(), APPEND);
-        write(path, "Sarah Stone, Female, 20/09/80\n".getBytes(), APPEND);
-        write(path, "Wes Jackson, Male, 14/08/74".getBytes(), APPEND);
+    void readReturnsAddressBookWhenFileEntryHasSpace() {
+        writeLine(path, "Bill McKnight, Male , 16/03/12");
+        writeLine(path, "Paul Robinson, Male, 15/01/85");
+        writeLine(path, "Gemma Lane, Female, 20/11/91");
+        writeLine(path, "Sarah Stone, Female, 20/09/80");
+        writeLine(path, "Wes Jackson, Male, 14/08/74");
 
         AddressBook actual = new Reader().read(path);
 
@@ -166,5 +159,13 @@ class ReaderTest {
                         tuple("Gemma Lane", FEMALE, LocalDate.of(1991, NOVEMBER, 20)),
                         tuple("Sarah Stone", FEMALE, LocalDate.of(1980, SEPTEMBER, 20)),
                         tuple("Wes Jackson", MALE, LocalDate.of(1974, AUGUST, 14)));
+    }
+
+    private static void writeLine(Path path, String s) {
+        try {
+            Files.write(path, format("%s\n", s).getBytes(), APPEND);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

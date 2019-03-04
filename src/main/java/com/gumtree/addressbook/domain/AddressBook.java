@@ -18,4 +18,11 @@ public class AddressBook {
     public void add(final String name, final Gender gender, final LocalDate dateOfBirth) {
         entries.put(name, new AddressBookEntry(name, gender, dateOfBirth));
     }
+
+    long count(Gender gender) {
+        return entries.values()
+                .stream()
+                .filter(e -> e.gender() == gender)
+                .count();
+    }
 }
