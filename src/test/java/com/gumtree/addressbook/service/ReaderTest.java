@@ -15,7 +15,12 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
+import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.FEMALE;
 import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.MALE;
+import static java.nio.file.Files.createTempFile;
+import static java.nio.file.Files.write;
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -122,7 +127,7 @@ class ReaderTest {
 
         assertThat(actual.getEntries())
                 .extracting("name", "gender", "dateOfBirth")
-                .containsOnly(tuple("Bill McKnight", MALE, LocalDate.of(1977, 3, 16)));
+                .containsOnly(tuple("Bill McKnight", MALE, LocalDate.of(1977, MARCH, 16)));
     }
 
     @ParameterizedTest
@@ -139,6 +144,27 @@ class ReaderTest {
 
         assertThat(actual.getEntries())
                 .extracting("name", "gender", "dateOfBirth")
-                .containsOnly(tuple("Bill McKnight", Gender.valueOf(addressBookEntryGender), LocalDate.of(1977, 3, 16)));
+                .containsOnly(tuple("Bill McKnight", Gender.valueOf(addressBookEntryGender), LocalDate.of(1977, MARCH, 16)));
+    }
+
+    @Test
+    void readReturnsAddressBookWhenFileEntryHasSpace() throws IOException {
+        Path path = createTempFile(tempDir, "", "");
+        write(path, "Bill McKnight, Male , 16/03/12\n".getBytes());
+        write(path, "Paul Robinson, Male, 15/01/85\n".getBytes(), APPEND);
+        write(path, "Gemma Lane, Female, 20/11/91\n".getBytes(), APPEND);
+        write(path, "Sarah Stone, Female, 20/09/80\n".getBytes(), APPEND);
+        write(path, "Wes Jackson, Male, 14/08/74".getBytes(), APPEND);
+
+        AddressBook actual = new Reader().read(path);
+
+        assertThat(actual.getEntries())
+                .extracting("name", "gender", "dateOfBirth")
+                .containsOnly(
+                        tuple("Bill McKnight", MALE, LocalDate.of(2012, MARCH, 16)),
+                        tuple("Paul Robinson", MALE, LocalDate.of(1985, JANUARY, 15)),
+                        tuple("Gemma Lane", FEMALE, LocalDate.of(1991, NOVEMBER, 20)),
+                        tuple("Sarah Stone", FEMALE, LocalDate.of(1980, SEPTEMBER, 20)),
+                        tuple("Wes Jackson", MALE, LocalDate.of(1974, AUGUST, 14)));
     }
 }
