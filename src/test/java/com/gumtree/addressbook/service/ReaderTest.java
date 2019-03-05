@@ -41,7 +41,6 @@ class ReaderTest {
         assertThrows(RuntimeException.class, () -> new Reader().read(Paths.get("unknown")));
     }
 
-
     @Test
     void readReturnsEmptyAddressBookWhenFileIsEmpty() {
         AddressBook actual = new Reader().read(path);

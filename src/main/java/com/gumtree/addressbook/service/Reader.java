@@ -1,7 +1,6 @@
 package com.gumtree.addressbook.service;
 
 import com.gumtree.addressbook.domain.AddressBook;
-import com.gumtree.addressbook.domain.AddressBookEntry;
 import com.gumtree.addressbook.domain.AddressBookEntry.Gender;
 import org.apache.commons.lang3.StringUtils;
 
@@ -16,14 +15,14 @@ import java.time.temporal.ChronoField;
 
 import static org.apache.commons.lang3.EnumUtils.getEnumIgnoreCase;
 
-class Reader {
+public class Reader {
 
     private static final String SEPARATOR = "\\s*,\\s*";
     private static final DateTimeFormatter FORMATTER = new DateTimeFormatterBuilder().appendPattern("dd/MM/")
             .appendValueReduced(ChronoField.YEAR, 2, 2, Year.now().getValue() - 80)
             .toFormatter();
 
-    AddressBook read(Path path) {
+    public AddressBook read(Path path) {
 
         AddressBook addressBook = new AddressBook();
         try {

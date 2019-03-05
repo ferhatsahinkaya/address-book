@@ -12,12 +12,23 @@ repositories {
 }
 
 dependencies {
+    def junitVersion = '5.4.0'
+    def cucumberVersion = '4.2.5'
+
     compile 'org.apache.commons:commons-lang3:3.8.1'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.4.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.4.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.4.0'
-    testCompile 'org.assertj:assertj-core:3.12.0'
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testCompile 'org.assertj:assertj-core:3.12.1'
+    testCompile "io.cucumber:cucumber-java8:${cucumberVersion}"
+    testCompile "io.cucumber:cucumber-junit:${cucumberVersion}"
+}
+
+configurations {
+    cucumberRuntime {
+        extendsFrom testRuntime
+    }
 }
 
 test {
@@ -26,3 +37,16 @@ test {
         events "passed", "skipped", "failed", "standardOut", "standardError"
     }
 }
+
+task cucumber() {
+    dependsOn assemble, compileTestJava
+    doLast {
+        javaexec {
+            main = "cucumber.api.cli.Main"
+            classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
+            args = ['--strict', '--plugin', 'pretty', '--glue', 'cucumber.steps', 'src/test/resources']
+        }
+    }
+}
+
+build.dependsOn cucumber
