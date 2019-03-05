@@ -1,4 +1,7 @@
-**Assumptions**
+# Build
+- `./gradlew clean build` runs a clean build and runs all tests
+
+# Assumptions
 
 * Name is assumed to be unique in the address book and used as the key for the map.
 * If a line contains less than or greater than 3 elements - line is ignored silently.
