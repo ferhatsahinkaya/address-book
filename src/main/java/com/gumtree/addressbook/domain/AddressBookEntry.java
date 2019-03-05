@@ -25,6 +25,10 @@ public class AddressBookEntry {
         return gender;
     }
 
+    LocalDate dateOfBirth() {
+        return dateOfBirth;
+    }
+
     public enum Gender {
         MALE, FEMALE;
     }
