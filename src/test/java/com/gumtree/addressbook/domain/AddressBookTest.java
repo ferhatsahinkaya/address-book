@@ -13,6 +13,7 @@ import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.FEMALE;
 import static com.gumtree.addressbook.domain.AddressBookEntry.Gender.MALE;
 import static java.time.Month.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AddressBookTest {
     private final AddressBook underTest = new AddressBook();
@@ -103,6 +104,44 @@ class AddressBookTest {
             assertThat(underTest.findOldest())
                     .isPresent()
                     .hasValueSatisfying(o -> assertThat(o).isIn("Bill McKnight", "Johnny Stone"));
+        }
+    }
+
+    @Nested
+    class AgeDifference {
+
+        @Test
+        void throwsIllegalArgumentExceptionWhenBothEntriesNotFound() {
+            assertThrows(IllegalArgumentException.class, () -> underTest.ageDifference("Bill McKnight", "Johnny Stone"));
+        }
+
+        @Test
+        void throwsIllegalArgumentExceptionWhenOneEntryNotFound() {
+            underTest.add("Bill McKnight", MALE, LocalDate.of(1950, MARCH, 22));
+
+            assertThrows(IllegalArgumentException.class, () -> underTest.ageDifference("Bill McKnight", "Johnny Stone"));
+        }
+
+        @Test
+        void returnsZeroWhenBothDateOfBirthsAreSame() {
+            underTest.add("Bill McKnight", MALE, LocalDate.of(1950, MARCH, 22));
+            underTest.add("Johnny Stone", MALE, LocalDate.of(1950, MARCH, 22));
+
+            assertThat(underTest.ageDifference("Bill McKnight", "Johnny Stone")).isZero();
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "1950-03-22, 1950-03-30, 8",
+                "1950-03-30, 1950-03-22, -8",
+                "1970-12-30, 1971-12-30, 365",
+                "1977-03-16, 1985-01-15, 2862"
+        })
+        void returnsInDaysWhenDateOfBirthsAreDifferent(LocalDate firstDateOfBirth, LocalDate secondDateOfBirth, int ageDifference) {
+            underTest.add("Bill McKnight", MALE, firstDateOfBirth);
+            underTest.add("Emma Robinson", FEMALE, secondDateOfBirth);
+
+            assertThat(underTest.ageDifference("Bill McKnight", "Emma Robinson")).isEqualTo(ageDifference);
         }
     }
 }
