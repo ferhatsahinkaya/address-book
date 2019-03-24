@@ -33,8 +33,7 @@ public class AddressBook {
     public Optional<String> findOldest() {
         return entries.entrySet()
                 .stream()
-                .sorted(comparing(o -> o.getValue().dateOfBirth()))
-                .findAny()
+                .min(comparing(o -> o.getValue().dateOfBirth()))
                 .map(Map.Entry::getKey);
     }
 
